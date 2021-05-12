@@ -1,0 +1,139 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.3.1/p5.js"></script>
+<script src="gl_utils.js"></script>
+<script src="main.js"></script>
+
+<body bgcolor=white>
+<canvas id='canvas1' width='800' height='800'>
+</canvas>
+</body>
+
+<script id="vs" type="x-shader/x-vertex">
+   attribute vec3 aPosition;
+   varying   vec3 vPosition;
+   void main() {
+      gl_Position = vec4(aPosition, 1.0);
+      vPosition = aPosition;
+   }
+</script>
+
+<script id="fs" type="x-shader/x-fragment">
+    precision mediump float;
+    uniform float uTime;
+    varying vec3 vPosition;
+    uniform vec3 uCursor;
+    const int NUM_OBJECTS = 64;
+    uniform vec4  pos[NUM_OBJECTS];   //objects position + radius
+    uniform vec3  col[NUM_OBJECTS];   //object color
+
+
+    struct Sphere {
+        vec3 center;
+        float radius;
+        vec3 color;
+    };
+
+    struct Ray {
+        vec3 origin;
+        vec3 direction;
+    };
+
+    struct Light {
+        vec3 position;
+        float ambience;
+        vec3 specular;
+        vec3 diffuse;
+    };
+
+    Sphere spheres[2];
+    Ray rays[1];
+    Light light[1];
+
+
+    void initialize() {
+        float x = vPosition.x;
+        float y = vPosition.y;
+        float z = vPosition.z;
+        float focalLength = 2.0;
+        vec3 color = vec3(0.0, 0.0, 0.0);
+
+        // Create spheres
+        spheres[0].center = vec3(pos[0].x, pos[0].y, pos[0].z);
+        spheres[0].radius = pos[0].w;
+        spheres[0].color = vec3(1.0, 0.0, 0.0);
+        spheres[1].center = vec3(pos[1].x, pos[1].y, pos[1].z);
+        spheres[1].radius = pos[1].w;
+        spheres[1].color = vec3(0.0, 1.0, 1.0);
+
+        // Create ray
+        rays[0].origin = vec3(0.0, 0.0, 4.0);
+        rays[0].direction = normalize(vec3(x-0.5, 0.5-y, -focalLength));
+
+        // Create Light source
+        light[0].position = vec3(uCursor.x, -uCursor.y, 0.9);
+        light[0].ambience = 0.01;
+    }
+
+    vec3 checkIntersectSphere(Sphere[2] spheres, Ray ray, Light light) {
+        const int NUM_OBJECTS = 64;
+        float ts[NUM_OBJECTS];
+        float t = 0.0;
+        vec3 cameraSource = ray.origin;
+        vec3 cameraDirection = ray.direction;
+        vec3 color = vec3(0.0, 0.0, 0.0);
+        for(int i=0;i<2;i++){
+          Sphere sphere = spheres[i];
+          vec3 sphereCenter = sphere.center;
+          vec3 colorOfSphere = sphere.color;
+          float radius = sphere.radius;
+          vec3 lightSource = light.position;
+          float ambience = light.ambience;
+          vec3 color = vec3(0.0, 0.0, 0.0);
+
+
+          vec3 distanceFromCenter = (cameraSource - sphereCenter);
+          float B = 2.0 * dot(cameraDirection, distanceFromCenter);
+          float C = dot(distanceFromCenter, distanceFromCenter) - pow(radius, 2.0);
+          float delta = pow(B, 2.0) - 4.0 * C;
+          if (delta > 0.0) {
+              float sqRoot = sqrt(delta);
+              float t1 = (-B + sqRoot) / 2.0;
+              float t2 = (-B - sqRoot) / 2.0;
+              t = min(t1, t2);
+          }
+          if (delta == 0.0) {
+              t = -B / 2.0;
+          }
+          ts[i] = t;
+        }
+        int minIndex;
+        float lVal = ts[0];
+        for(int i =1;i<2;i++){
+          if(ts[1] > lVal){
+            minIndex = i;
+          }
+        }
+        if (ts[1] > 0.0) {
+            Sphere sphere = spheres[1];
+            vec3 sphereCenter = sphere.center;
+            vec3 colorOfSphere = sphere.color;
+            float radius = sphere.radius;
+            vec3 lightSource = light.position;
+            float ambience = light.ambience;
+            vec3 surfacePoint = cameraSource + (t * cameraDirection);
+            vec3 surfaceNormal = normalize(surfacePoint - sphereCenter);
+            color = colorOfSphere * (ambience + ((1.0 - ambience) * max(0.0, dot(surfaceNormal, lightSource))));
+        }
+        return color;
+    }
+
+    void main() {
+        initialize();
+        vec3 color = checkIntersectSphere(spheres, rays[0], light[0]);
+        gl_FragColor = vec4(color, 1.0);
+   }
+</script>
+
+<script>
+    start_gl("canvas1", getStringFromDOMElement('vs'), getStringFromDOMElement('fs'));
+</script>
+
