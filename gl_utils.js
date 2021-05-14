@@ -8,7 +8,7 @@ function initObjectArray(){
     for (var i=0; i< nMaxObjects; i++){
     objects.push([0,0,0,0,0,0,0,0])
   }
-  objects[0] = [0,0,0,0.2,1,0,0,1]
+  // objects[0] = [0,0,0,0.2,1,0,0,1]
 }
 function packObjectArray(){
   oPos = []
@@ -129,6 +129,7 @@ function gl_update(gl) {
     gl.uniform1f(gl.uTime, (new Date()).getTime() / 1000 - time0);
     gl.uniform3f(gl.uCursor, gl.cursor.x, gl.cursor.y, gl.cursor.z); 
     gl.uniform4fv(gl.pos,oPos)
+    gl.uniform3fv(gl.col,oCol)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
 }
