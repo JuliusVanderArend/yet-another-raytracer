@@ -4,11 +4,12 @@ var nMaxObjects = 64
 var objects = [] //x,y,z,R,r,g,b,t
 var oPos = []
 var oCol = []
+var cPos = [0.0,0.0,4.0]
 function initObjectArray(){
     for (var i=0; i< nMaxObjects; i++){
     objects.push([0,0,0,0,0,0,0,0])
   }
-  // objects[0] = [0,0,0,0.2,1,0,0,1]
+  objects[0] = [0,0,0,0.2,1,0,0,1]
 }
 function packObjectArray(){
   oPos = []
@@ -119,6 +120,7 @@ function gl_init(gl, vertexShader, fragmentShader) {
     gl.uCursor = gl.getUniformLocation(program, "uCursor");
     gl.pos = gl.getUniformLocation(program,"pos")
     gl.col = gl.getUniformLocation(program,"col")
+    gl.cPos = gl.getUniformLocation(program,"cPos")
 }
 
 /**
@@ -127,9 +129,9 @@ function gl_init(gl, vertexShader, fragmentShader) {
  */
 function gl_update(gl) {
     gl.uniform1f(gl.uTime, (new Date()).getTime() / 1000 - time0);
-    gl.uniform3f(gl.uCursor, gl.cursor.x, gl.cursor.y, gl.cursor.z); 
+    gl.uniform3f(gl.uCursor,0, 0, 0); 
     gl.uniform4fv(gl.pos,oPos)
-    gl.uniform3fv(gl.col,oCol)
+    gl.uniform3f(gl.cPos,cPos[0],cPos[1],cPos[2])
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
 }
@@ -146,6 +148,7 @@ function start_gl(canvas_id, vertexShader, fragmentShader) {
     try {
         var canvas = document.getElementById(canvas_id);
         var gl = canvas.getContext("experimental-webgl");
+        console.log(gl)
         globalGl = gl
     } catch (e) {
         throw "Sorry, your browser does not support WebGL.";
@@ -153,17 +156,17 @@ function start_gl(canvas_id, vertexShader, fragmentShader) {
 
     // Catch mouse events that go to the canvas.
 
-    function setMouse(z) {
-        var r = event.target.getBoundingClientRect();
-        gl.cursor.x = (event.clientX - r.left  ) / (r.right - r.left) * 2 - 1;
-        gl.cursor.y = (event.clientY - r.bottom) / (r.top - r.bottom) * 2 - 1;
-        if (z !== undefined)
-            gl.cursor.z = z;
-    }
-    canvas.onmousedown = function(event) { setMouse(1); } // On mouse down, set z to 1.
-    canvas.onmousemove = function(event) { setMouse() ; }
-    canvas.onmouseup   = function(event) { setMouse(0); } // On mouse up  , set z to 0
-    gl.cursor = new Vector3();
+    // function setMouse(z) {
+    //     var r = event.target.getBoundingClientRect();
+    //     gl.cursor.x = (event.clientX - r.left  ) / (r.right - r.left) * 2 - 1;
+    //     gl.cursor.y = (event.clientY - r.bottom) / (r.top - r.bottom) * 2 - 1;
+    //     if (z !== undefined)
+    //         gl.cursor.z = z;
+    // }
+    // canvas.onmousedown = function(event) { setMouse(1); } // On mouse down, set z to 1.
+    // canvas.onmousemove = function(event) { setMouse() ; }
+    // canvas.onmouseup   = function(event) { setMouse(0); } // On mouse up  , set z to 0
+    // gl.cursor = new Vector3();
 
     // Initialize gl. Then start the frame loop.
     gl_init(gl, vertexShader, fragmentShader);
