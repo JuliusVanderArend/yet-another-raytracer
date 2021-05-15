@@ -1,7 +1,7 @@
 
 var nMaxObjects = 64
 var theta = 0
-var moveSpeed = 0.01
+var moveSpeed = 0.1
 function draw(){
   theta++
   gl_update(globalGl);
