@@ -145,7 +145,7 @@
       bool hasHit = false;
       float minT = 10000.0; // holds distance to closest hit
       Voxel hitVoxel;
-      seed = 1.0;
+      seed = randSeed;
       for(int i = 0; i < 128; i++){
           if(voxels[i].isInit == true){
             vec2 hit = intersectVoxel(rays[0].origin,rays[0].direction,voxels[i].min,voxels[i].max);
@@ -166,10 +166,11 @@
         vec3 gi = vec3(0.0,0.0,0.0);
         vec3 randDir;
         hitLoc += normal*0.01;
-        const int sampleCount = 100;
-        const float sf = 0.1;
+        const int sampleCount = 20;
+        const float sf = 0.05;
         for(int j = 0; j< sampleCount;j++){
           randDir = 4.0*randVec(1.0/float(j)+seed) + normal; // must fix random generation
+          seed += random(seed)-0.5;
           for(int i = 0; i < 128; i++){
             if(voxels[i].isInit == true){
               vec2 hit = intersectVoxel(hitLoc,randDir,voxels[i].min,voxels[i].max);
