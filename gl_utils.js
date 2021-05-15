@@ -122,8 +122,7 @@ function gl_init(gl, vertexShader, fragmentShader) {
     gl.pos = gl.getUniformLocation(program,"pos")
     gl.col = gl.getUniformLocation(program,"col")
     gl.cPos = gl.getUniformLocation(program,"cPos")
-    gl.randSeed1 = gl.getUniformLocation(program,"randomSeed1")
-    gl.randSeed2 = gl.getUniformLocation(program,"randomSeed2")
+    gl.randSeed = gl.getUniformLocation(program,"randSeed")
 }
 
 /**
@@ -132,8 +131,7 @@ function gl_init(gl, vertexShader, fragmentShader) {
  */
 function gl_update(gl) {
     gl.uniform1f(gl.uTime, (new Date()).getTime() / 1000 - time0);
-    gl.uniform1f(gl.randSeed1,Math.random())
-    gl.uniform1f(gl.randSeed1,Math.random())
+    gl.uniform1f(gl.randSeed,Math.random())
     gl.uniform3f(gl.uCursor,0, 0, 0); 
     gl.uniform4fv(gl.pos,oPos)
     gl.uniform3f(gl.cPos,cPos[0],cPos[1],cPos[2])
