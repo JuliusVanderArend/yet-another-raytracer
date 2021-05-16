@@ -4,6 +4,7 @@ var nMaxObjects = 64
 var objects = [] //x,y,z,R,r,g,b,t
 var oPos = []
 var oCol = []
+var thetaY = 0;
 var cPos = [0.0,0.0,4.0]
 // console.log(cPos)
 function initObjectArray(){
@@ -35,6 +36,14 @@ function Vector3() {
     this.z = 0;
 }
 
+function makeRandArr(){
+  randArr = []
+  for(var i = 0; i< 128; i ++){
+    randArr.push(Math.random())
+  }
+  return randArr
+}
+var randA = makeRandArr()
 Vector3.prototype = {
     set : function(x,y,z) {
         this.x = x;
@@ -123,6 +132,7 @@ function gl_init(gl, vertexShader, fragmentShader) {
     gl.col = gl.getUniformLocation(program,"col")
     gl.cPos = gl.getUniformLocation(program,"cPos")
     gl.randSeed = gl.getUniformLocation(program,"randSeed")
+    gl.thetaY =  gl.getUniformLocation(program,"thetaY")
 }
 
 /**
@@ -131,7 +141,8 @@ function gl_init(gl, vertexShader, fragmentShader) {
  */
 function gl_update(gl) {
     gl.uniform1f(gl.uTime, (new Date()).getTime() / 1000 - time0);
-    gl.uniform1f(gl.randSeed,Math.random())
+    gl.uniform1fv(gl.randSeed,randA)
+    gl.uniform1f(gl.thetaY,thetaY)
     gl.uniform3f(gl.uCursor,0, 0, 0); 
     gl.uniform4fv(gl.pos,oPos)
     gl.uniform3f(gl.cPos,cPos[0],cPos[1],cPos[2])
