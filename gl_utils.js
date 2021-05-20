@@ -4,8 +4,9 @@ var nMaxObjects = 64
 var objects = [] //x,y,z,R,r,g,b,t
 var oPos = []
 var oCol = []
-var thetaY = 0;
 var cPos = [0.0,0.0,4.0]
+var thetaY = 0;
+
 // console.log(cPos)
 function initObjectArray(){
     for (var i=0; i< nMaxObjects; i++){
@@ -36,14 +37,6 @@ function Vector3() {
     this.z = 0;
 }
 
-function makeRandArr(){
-  randArr = []
-  for(var i = 0; i< 128; i ++){
-    randArr.push(Math.random())
-  }
-  return randArr
-}
-var randA = makeRandArr()
 Vector3.prototype = {
     set : function(x,y,z) {
         this.x = x;
@@ -128,8 +121,6 @@ function gl_init(gl, vertexShader, fragmentShader) {
     gl.vertexAttribPointer(gl.aPosition, 3, gl.FLOAT, false, 0, 0);
     gl.uTime = gl.getUniformLocation(program, "uTime");
     gl.uCursor = gl.getUniformLocation(program, "uCursor");
-    gl.pos = gl.getUniformLocation(program,"pos")
-    gl.col = gl.getUniformLocation(program,"col")
     gl.cPos = gl.getUniformLocation(program,"cPos")
     gl.randSeed = gl.getUniformLocation(program,"randSeed")
     gl.thetaY =  gl.getUniformLocation(program,"thetaY")
@@ -141,10 +132,9 @@ function gl_init(gl, vertexShader, fragmentShader) {
  */
 function gl_update(gl) {
     gl.uniform1f(gl.uTime, (new Date()).getTime() / 1000 - time0);
-    gl.uniform1fv(gl.randSeed,randA)
+    gl.uniform1f(gl.randSeed,Math.random())
     gl.uniform1f(gl.thetaY,thetaY)
     gl.uniform3f(gl.uCursor,0, 0, 0); 
-    gl.uniform4fv(gl.pos,oPos)
     gl.uniform3f(gl.cPos,cPos[0],cPos[1],cPos[2])
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
@@ -161,7 +151,10 @@ var globalGl = null
 function start_gl(canvas_id, vertexShader, fragmentShader) {
     try {
         var canvas = document.getElementById(canvas_id);
-        var gl = canvas.getContext("experimental-webgl");
+        var gl = canvas.getContext("experimental-webgl",{
+          antialias: false,
+          failIfMajorPerformanceCaveat: true,
+          powerPreference : "high-performance"})
         console.log(gl)
         globalGl = gl
     } catch (e) {

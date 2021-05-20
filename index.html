@@ -25,15 +25,10 @@
     float z;
     uniform vec3 uCursor;
     const int NUM_OBJECTS = 64;
-    const int NUM_RANDOM = 128;
-    uniform vec4  pos[NUM_OBJECTS];   //objects position + radius
-    uniform vec3  col[NUM_OBJECTS];   //object color
     uniform vec3 cPos; // camera position
-    uniform float randSeed[NUM_RANDOM]; //cpu random seed
+    uniform float randSeed; //cpu random seed
     uniform float thetaY;
-    float randCount;
     float seed;
-    const float PHI = 1.61803398874989484820459;
     vec3 color = vec3(0.1,0.1,0.1);
     bool hasHit;
     struct Sphere {
@@ -87,7 +82,7 @@
         return vec3(0,-1,0);
       }
       else if(abs(hit.y-voxel.max.y)  < 0.01){
-        return vec3(0,1,0); // there is a bug here with normals being fliped into the object, fix later
+        return vec3(0,-1,0); // there is a bug here with normals being fliped into the object, fix later
       }
       else if(abs(hit.z-voxel.min.z)  < 0.01){
         return vec3(0,0,-1);
@@ -129,6 +124,16 @@
         voxels[7] = Voxel(vec3(-40,0,-10),vec3(40,1,-20),vec3(1,1,1),true);
         voxels[8] = Voxel(vec3(-40,-20,-20),vec3(40,0,-19),vec3(1,1,1),true);
         voxels[9] = Voxel(vec3(-30,-20,-19),vec3(-20,-19,-10),vec3(0.1,0.1,0.1),true);
+        voxels[10] = Voxel(vec3(-10,0,-20),vec3(10,1,10),vec3(1,1,1),true);
+        voxels[11] = Voxel(vec3(-10,-20,-10),vec3(-9,0,10),vec3(1,0,0),true);
+        voxels[12] = Voxel(vec3(9,-20,-10),vec3(10,0,10),vec3(0,1,0),true);
+        voxels[13] = Voxel(vec3(-4,-10.0-6.0*sin(uTime),-4),vec3(4,-9.0-6.0*sin(uTime),4),vec3(1,1,1),true);
+        voxels[14] = Voxel(vec3(-8,-8,0),vec3(-4,0,4),vec3(1,1,1),true);
+        voxels[15] = Voxel(vec3(2,-8,-4),vec3(6,0,0),vec3(1,1,1),true);
+        voxels[16] = Voxel(vec3(-10,-20,-20),vec3(10,-19,10),vec3(1,1,1),true);
+        voxels[17] = Voxel(vec3(-40,0,-10),vec3(40,1,-20),vec3(1,1,1),true);
+        voxels[18] = Voxel(vec3(-40,-20,-20),vec3(40,0,-19),vec3(1,1,1),true);
+        voxels[19] = Voxel(vec3(-30,-20,-19),vec3(-20,-19,-10),vec3(0.1,0.1,0.1),true);
 
         // Create ray
         rays[0].origin = cPos;//vec3(0.0, 0.0, 4.0);
@@ -140,64 +145,17 @@
     }
 
     vec3 worldColor(float y){
-      return vec3(y,y,y*1.3);
+      return vec3(max((y+0.2),0.2),max((y+0.2),0.2),max((y+0.2)*1.5,0.2));
     }
 
-    float random2(float offset){
-      return fract(tan(distance(vec2(x+1.0,y+1.0)*PHI*1000.0, vec2(x+1.0,y+1.0)*1000.0)*offset)*(x+1.0)*1000.0);
-      //return fract(sin((x+offset)*(y+512.0))*43758.5453123);
-    }
-
-    float random(vec3 scale, float seed){
-      randCount++;
-      return fract(sin(dot(gl_FragCoord.xyz + seed, scale)) * 43758.5453 + seed);
+    float random(float offset){
+      return fract(sin((x+offset)*(y+2.0))*43758.5453123);
     }
 
     vec3 randVec(float offset){
-      return 2.0 * vec3(random2(1.0+offset)-0.5,random2(2.0+offset)-0.5,random2(3.0+offset)-0.5);
+      return vec3(random(10.0+offset)-0.5,random(20.0+offset)-0.5,random(30.0+offset)-0.5);
     }
 
-
-    vec3 randVecInUnitSphere(float offset){
-      float nCalls = 0.0;
-      bool found = false;
-      vec3 p;
-      for(int i=0; i<10;i++){
-        p = randVec(offset+nCalls);
-        if (p.x*p.x + p.y*p.y + p.z*p.z <= 1.0){
-          return p;
-          break;
-        }
-        nCalls++;
-      }
-      return p;
-    }//try more scattering functions
-
-    vec3 randVecInHemisphere(vec3 normal,float offset){
-      vec3 in_unitS = randVecInUnitSphere(offset);
-      if (dot(in_unitS, normal) > 0.0){
-        return in_unitS;
-      }
-      else{
-        return -in_unitS;
-      }
-    }
-
-    vec3 cosineWeightedDirection(float seed, vec3 normal) {
-      float u = random(vec3(12.9898, 78.233, 151.7182), seed);
-      float v = random(vec3(63.7264, 10.873, 623.6736), seed);
-      float r = sqrt(u);
-      float angle = 6.283185307179586 * v;
-          // compute basis from normal
-      vec3 sdir, tdir;
-      if (abs(normal.x)<.5) {
-        sdir = cross(normal, vec3(1,0,0));
-      } else {
-        sdir = cross(normal, vec3(0,1,0));
-      }
-      tdir = cross(normal, sdir);
-      return r*cos(angle)*sdir + r*sin(angle)*tdir + sqrt(1.-u)*normal;
-    }
 
 
     
@@ -206,10 +164,9 @@
       bool hasHit = false;
       float minT = 10000.0; // holds distance to closest hit
       Voxel hitVoxel;
-      vec3 blurVec = 0.0*randVec(randSeed[1]);
-      for(int i = 0; i < 128; i++){
-          if(voxels[i].isInit == true){
-            vec2 hit = intersectVoxel(rays[0].origin,rays[0].direction+blurVec,voxels[i].min,voxels[i].max);
+      seed = randSeed;
+      for(int i = 0; i < 19; i++){
+            vec2 hit = intersectVoxel(rays[0].origin,rays[0].direction,voxels[i].min,voxels[i].max);
             if(hit.x < hit.y && hit.y > 0.0){
               if(hit.x < minT){
                 minT = hit.x;
@@ -217,42 +174,39 @@
                 hitVoxel = voxels[i];
               }
             }
-          }
         }
       if(hasHit){
-        Voxel pHitVoxel = hitVoxel;
         vec3 hitLoc = rayPos(rays[0],minT);
         vec3 normal = getVoxelNormal(hitLoc,hitVoxel);
+        hasHit = false;
         minT = 10000.0;
-        vec3 gi = vec3(100.0,100.0,100.0);
+        vec3 gi = vec3(0.0,0.0,0.0);
         vec3 randDir;
         hitLoc += normal*0.01;
-        const int sampleCount = 100;
-        const float sf = 1.0/100.0;
+        const int sampleCount = 40;
+        const float sf = 0.025;
         for(int j = 0; j< sampleCount;j++){
           hasHit = false;
-          randDir = cosineWeightedDirection(randSeed[j],normal);
-          for(int i = 0; i < 128; i++){
-            if(voxels[i].isInit == true){
+          randDir = 4.0*randVec(1.0/float(j)+seed) + normal;
+          seed ++;
+          for(int i = 0; i < 19; i++){
               vec2 hit = intersectVoxel(hitLoc,randDir,voxels[i].min,voxels[i].max);
-              if(hit.x < hit.y && hit.y > 0.0 && hit.x > 0.0){
+              if(hit.x < hit.y && hit.y > 0.0){
                 hasHit = true;
                 if(hit.x < minT){
                   minT = hit.x;
                   hitVoxel = voxels[i];
                 }
               }
-            }
           }
           if(hasHit){
-            gi += hitVoxel.color*0.001 - vec3(1,1,1);
+            gi += hitVoxel.color*sf- vec3(sf,sf,sf);
           }
           else{
-            gi += worldColor(-randDir.y)*0.5;
+            gi += worldColor(max(-randDir.y,0.0))*sf*2.0;
           }
         }
-        gi *= sf;
-        vec3 pixelColor = pHitVoxel.color*gi; + vec3(max(0.0,pHitVoxel.color.r-1.0),max(0.0,pHitVoxel.color.g-1.0),max(0.0,pHitVoxel.color.b-1.0));
+        vec3 pixelColor = hitVoxel.color*gi; + vec3(max(0.0,hitVoxel.color.r-1.0),max(0.0,hitVoxel.color.g-1.0),max(0.0,hitVoxel.color.b-1.0));
         gl_FragColor = vec4(vec3(sqrt(pixelColor.r),sqrt(pixelColor.g),sqrt(pixelColor.b)), 1.0);
       }
       else{
