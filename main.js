@@ -2,7 +2,7 @@
 
 var nMaxObjects = 64
 var theta = 0
-var moveSpeed = 0.1
+var moveSpeed = 0.4
 var lMx = 0
 var lMy = 0
 function draw(){
