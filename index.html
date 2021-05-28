@@ -3,7 +3,7 @@
 <script src="main.js"></script>
 <link href="style.css" rel="stylesheet" type="text/css" />
 <body bgcolor=white>
-<canvas id='canvas1' width='480' height='360'>
+<canvas id='canvas1' width='640' height='360'>
 </canvas>
 </body>
 
@@ -29,6 +29,9 @@
     uniform float randSeed; //cpu random seed
     uniform float thetaY;
     float seed;
+    const float PI = 3.1415926535897932384626433832795;
+    const int sampleCount =100;
+    const float sf = 0.01;
     vec3 color = vec3(0.1,0.1,0.1);
     bool hasHit;
     struct Sphere {
@@ -114,17 +117,17 @@
         float focalLength = 1.0;
         vec3 color = vec3(0.0, 0.0, 0.0);
         // create voxels;
-        voxels[0] = Voxel(vec3(-50,0,-100),vec3(50,1,50),vec3(1,1,1),true,1); //floor
+        voxels[0] = Voxel(vec3(-50,0,-100),vec3(50,1,50),vec3(1,1,1),true,3); //floor
         voxels[1] = Voxel(vec3(-10,-20,-10),vec3(-9,0,10),vec3(1,0,0),true,1);
         voxels[2] = Voxel(vec3(9,-20,-40),vec3(10,0,10),vec3(0,1,0),true,1);
         voxels[3] = Voxel(vec3(-4,-10.0-6.0*sin(uTime),-4),vec3(4,-9.0-6.0*sin(uTime),4),vec3(1,1,1),true,1);
-        voxels[4] = Voxel(vec3(-30,-20,-41),vec3(10,0,-40),vec3(1,1,1),true,1);
+        voxels[4] = Voxel(vec3(-30,-20,-41),vec3(10,0,-40),vec3(1,1,1),true,3);
         voxels[5] = Voxel(vec3(-50,-20,-100),vec3(-49,0,sin(uTime)*20.0),vec3(1,1,1),true,1);
         voxels[6] = Voxel(vec3(-50,-20,-100),vec3(-30,-18,50),vec3(1,1,1),true,1);
-        voxels[7] = Voxel(vec3(-50,0,-100),vec3(0,-20,-90),vec3(1,0,0),true,1);
+        voxels[7] = Voxel(vec3(-50,0,-100),vec3(0,-20,-90),vec3(1,0,0),true,2);
         voxels[8] = Voxel(vec3(-50,0,40),vec3(-30,-20,50),vec3(1,1,1),true,1);
         voxels[9] = Voxel(vec3(10,-100,0),vec3(40,0,30),vec3(1,1,1),true,1);
-        //voxels[10] = Voxel(vec3(-100,-100,-100),vec3(100,100,100),vec3(1,1,1),true,1);
+        voxels[10] = Voxel(vec3(cPos.x,cPos.y,cPos.z),vec3(cPos.x+2.0,cPos.y+7.0,cPos.z+2.0),vec3(1,0,0),true,1);
 
 
         // Create ray
@@ -135,12 +138,12 @@
         lights[0] =  Light(vec3(-40,-16,20),vec3(0.1,1,0.1),400.0);
         lights[1] =  Light(vec3(-40,-16,-30),vec3(1,0.1,0.1),150.0);
         lights[2] =  Light(vec3(-40,-16,-70),vec3(1,0.7,0.9),80.0);
-        //lights[3] =  Light(vec3(cos(uTime)*20.0,-12.0-6.0*sin(uTime),5),vec3(1,0.2,0.4),100.0);
+        lights[3] =  Light(vec3(0,-14,0),vec3(1.0,0.1,10.7),400.0);
         //lights[4] =  Light(vec3(-uTime+20.0,-12.0-6.0*cos(uTime),-30),vec3(0,1.0,0.2),100.0);
     }
 
     vec3 worldColor(float y){
-      return vec3(max((y+0.2),0.2),max((y+0.2),0.2),max((y+0.2)*1.5,0.2))*0.4;
+      return vec3(max((y+0.2),0.2)+0.5,max((y+0.2),0.2),max((y+0.2)*1.5,0.2))*0.8;
     }
 
     float random(float offset){
@@ -171,11 +174,101 @@
       return r*cos(angle)*sdir + r*sin(angle)*tdir + sqrt(1.-u)*normal;
     }
 
-    vec3 mat1(Voxel hitVoxel, vec3 hitLos){
-      
-      
-      return hitVoxel.color*(gi+ lighting)*(shadowC + lighting)+ 1.0*emis ;
+
+    vec3 mater1(Voxel hitVoxel, Ray ray,float minT){
+      vec3 hitLoc = rayPos(ray,minT);
+      vec3 normal = getVoxelNormal(hitLoc,hitVoxel);
+      hitLoc += normal*0.01;
+      vec3 gi = vec3(0.0);
+      vec3 randDir = vec3(0.0);
+      float minDist = 10000000.0;
+      Voxel closestHit;
+      for(int i = 0; i < sampleCount; i++){
+        hasHit = false;
+          randDir = cosineWeightedDirection(float(i)+seed*0.03, normal);//4.0*randVec(1.0/float(i)+seed) + normal;
+          seed ++;
+          for(int i = 0; i < 11; i++){
+              vec2 hit = intersectVoxel(hitLoc,randDir,voxels[i].min,voxels[i].max);
+              if(hit.x < hit.y && hit.y > 0.0){
+                hasHit = true;
+                if(hit.x < minDist){
+                  minDist = hit.x;
+                  closestHit = voxels[i];
+                }
+              }
+          }
+          if(hasHit){
+            gi += closestHit.color*sf*0.03 - vec3(sf,sf,sf)*0.02;
+          }
+          else{
+            gi += worldColor(max(-randDir.y,0.0))*sf;
+          }
+      }
+      vec3 lighting = vec3(0.0);
+      for(int j =0; j< 5; j++){
+          vec3 shadowLDir = lights[j].position - hitLoc;
+          vec3 originalDir = normalize(shadowLDir);
+          float lDist = distance(hitLoc,lights[j].position);
+          float hasHitS = 1.0;
+          for(int z = 0; z< 10; z++){
+            float sfs = 0.1;
+            shadowLDir = lights[j].position - hitLoc + randVec(float(z)+seed);
+            for(int i = 0; i < 11; i++){
+              vec2 hitSL = intersectVoxel(hitLoc,shadowLDir,voxels[i].min,voxels[i].max);
+              float rDist = distance(hitLoc,rayPos(Ray(hitLoc,shadowLDir),hitSL.x));
+              if(hitSL.x < hitSL.y && hitSL.y > 0.01 && rDist < lDist){
+                hasHitS-=sfs;
+                sfs = 0.0;
+              }
+            }
+          }
+          lighting += lights[j].color * (1.0/pow(lDist,2.0)) * lights[j].intens * hasHitS * dot(normal, normalize(originalDir));
+        }
+      return hitVoxel.color*(gi+lighting);
     }
+
+
+
+    vec3 mater2(Voxel hitVoxel, Ray ray, float minT){
+      vec3 hitLoc = rayPos(ray,minT);
+      vec3 normal = getVoxelNormal(hitLoc,hitVoxel);
+      hitLoc += normal*0.01;
+      vec3 reflecDir = ray.direction - 2.0*dot(ray.direction,normal)*normal + randVec(minT+uTime)*0.0;
+      Voxel closestHit;
+      float minDist = 10000000.0;
+      for(int i = 0; i < 11; i++){
+        vec2 hit = intersectVoxel(hitLoc,reflecDir,voxels[i].min,voxels[i].max);
+        if(hit.x < hit.y && hit.y > 0.0){
+          hasHit = true;
+          if(hit.x < minDist){
+            minDist = hit.x;
+            closestHit = voxels[i];
+          }
+        }
+      }
+      if(hasHit){
+        return mater1(closestHit,Ray(hitLoc,reflecDir),minDist)*0.9 * hitVoxel.color;
+      }
+      else{
+        return worldColor(max(-reflecDir.y,0.1))*0.9*hitVoxel.color;
+      }
+    }
+    
+
+    vec3 mater3(Voxel hitVoxel, Ray ray, float minT){
+      vec3 hitLoc = rayPos(ray,minT);
+      float checkSize = 0.4;
+      float fmodResult = mod(floor(checkSize * hitLoc.x) + floor(checkSize * hitLoc.z), 2.0);
+      float fin = max(sign(fmodResult), 0.0);
+      if(fin > 0.5){
+        return mater1(hitVoxel,ray,minT);
+      }
+      else{
+        return mater2(hitVoxel,ray,minT);
+      }
+    }
+
+    
 
 
 
@@ -199,75 +292,15 @@
         }
       Voxel OhitVoxel = hitVoxel;
       if(hasHit){
-        vec3 hitLoc = rayPos(rays[0],minT);
-        vec3 normal = getVoxelNormal(hitLoc,hitVoxel);
-        hasHit = false;
-        minT = 10000.0;
-        vec3 gi = vec3(1.0);
-        vec3 lighting = vec3(0.0);
-        vec3 randDir;
-        hitLoc += normal*0.01;
-        const int sampleCount = 100;
-        const float sf = 1.0/100.0;
-        
-        for(int j =0; j< 5; j++){
-          vec3 shadowLDir = lights[j].position - hitLoc;
-          vec3 originalDir = normalize(shadowLDir);
-          float lDist = distance(hitLoc,lights[j].position);
-          float hasHitS = 1.0;
-          for(int z = 0; z< 10; z++){
-            float sfs = 0.1;
-            shadowLDir = lights[j].position - hitLoc + randVec(float(z)+seed);
-            for(int i = 0; i < 10; i++){
-              vec2 hitSL = intersectVoxel(hitLoc,shadowLDir,voxels[i].min,voxels[i].max);
-              float rDist = distance(hitLoc,rayPos(Ray(hitLoc,shadowLDir),hitSL.x));
-              if(hitSL.x < hitSL.y && hitSL.y > 0.01 && rDist < lDist){
-                hasHitS-=sfs;
-                sfs = 0.0;
-              }
-            }
-          }
-          lighting += lights[j].color * (1.0/pow(lDist,2.0)) * lights[j].intens * hasHitS * dot(normal, normalize(originalDir));
+        if(hitVoxel.matIndex == 1){
+          gl_FragColor = vec4(mater1(hitVoxel,rays[0],minT),1.0);
         }
-
-        for(int j = 0; j< sampleCount;j++){
-          hasHit = false;
-          randDir = cosineWeightedDirection(float(j)+seed*0.03, normal);//4.0*randVec(1.0/float(j)+seed) + normal;
-          seed ++;
-          for(int i = 0; i < 10; i++){
-              vec2 hit = intersectVoxel(hitLoc,randDir,voxels[i].min,voxels[i].max);
-              if(hit.x < hit.y && hit.y > 0.0){
-                hasHit = true;
-                if(hit.x < minT){
-                  minT = hit.x;
-                  hitVoxel = voxels[i];
-                }
-              }
-          }
-          if(hasHit){
-            gi +=  - vec3(sf,sf,sf);
-          }
-          else{
-            gi += worldColor(max(-randDir.y,0.0))*sf;
-          }
+        else if(hitVoxel.matIndex == 2){
+          gl_FragColor = vec4(mater2(hitVoxel,rays[0],minT),1.0);
         }
-        float shadow = 1.0;
-        for(int j = 0; j< 80;j++){
-          vec3 shadowDir = normalize(vec3(uTime*5.0-50.0,-100.0,100.0)-hitLoc)+randVec(1.0/float(j)+seed)*0.08;
-          float sFac = sf;
-          for(int i = 0; i < 10; i++){
-            vec2 hitS = intersectVoxel(hitLoc,shadowDir,voxels[i].min,voxels[i].max);
-            if(hitS.x < hitS.y && hitS.y > 0.0 && length(voxels[i].color) < 1.74){
-              shadow -=sFac;
-              sFac = 0.0;
-              //break;
-            }
-          }
+        else if(hitVoxel.matIndex == 3){
+          gl_FragColor = vec4(mater3(hitVoxel,rays[0],minT),1.0);
         }
-        vec3 emis = vec3(max(0.0,hitVoxel.color.r-1.0),max(0.0,hitVoxel.color.g-1.0),max(0.0,hitVoxel.color.b-1.0));
-        vec3 shadowC = vec3(shadow) + vec3(0.0,0.0,0.2);
-        vec3 pixelColor = OhitVoxel.color*(gi+ lighting)*(shadowC + lighting)+ 1.0*emis ;
-        gl_FragColor = vec4(vec3(sqrt(pixelColor.r),sqrt(pixelColor.g),sqrt(pixelColor.b)), 1.0);
       }
       else{
         gl_FragColor = vec4(worldColor(max(-rays[0].direction.y,0.1)),1.0);
@@ -278,4 +311,3 @@
 <script>
     start_gl("canvas1", getStringFromDOMElement('vs'), getStringFromDOMElement('fs'));
 </script>
-
