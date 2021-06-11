@@ -4,7 +4,7 @@ var nMaxObjects = 64
 var objects = [] //x,y,z,R,r,g,b,t
 var oPos = []
 var oCol = []
-var cPos = [0.0,0.0,4.0]
+var cPos = [0,-5,10]
 var thetaY = 0;
 
 // console.log(cPos)

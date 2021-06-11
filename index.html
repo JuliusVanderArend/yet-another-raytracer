@@ -3,7 +3,7 @@
 <script src="main.js"></script>
 <link href="style.css" rel="stylesheet" type="text/css" />
 <body bgcolor=white>
-<canvas id='canvas1' width='640' height='360'>
+<canvas id='canvas1' width='1280' height='720'>
 </canvas>
 </body>
 
@@ -57,6 +57,13 @@
       vec3 color;
       bool isInit;
       int matIndex;
+      float reflectance;
+    };
+
+    struct Hit{
+      Voxel voxel;
+      float minDist;
+      bool hasHit;
     };
 
 
@@ -74,24 +81,26 @@
       return vec2(tNear, tFar);
     }
 
+
     vec3 getVoxelNormal(vec3 hit, Voxel voxel){
+      vec3 offset = (vec3(mod(hit.x,2.0),mod(hit.y,2.0),mod(hit.z,2.0))-vec3(0.5))*0.0;
       if(abs(hit.x-voxel.min.x)  < 0.001){
-        return vec3(-1,0,0);
+        return vec3(-1,0,0) + offset;
       }
       else if(abs(hit.x-voxel.max.x)  < 0.001){
-        return vec3(1,0,0);
+        return vec3(1,0,0)+ offset;
       }
       else if(abs(hit.y-voxel.min.y)  < 0.001){
-        return vec3(0,-1,0);
+        return vec3(0,-1,0)+ offset;
       }
       else if(abs(hit.y-voxel.max.y)  < 0.001){
-        return vec3(0,1,0); // there is a bug here with normals being fliped into the object, fix later
+        return vec3(0,1,0)+ offset; // there is a bug here with normals being fliped into the object, fix later
       }
       else if(abs(hit.z-voxel.min.z)  < 0.001){
-        return vec3(0,0,-1);
+        return vec3(0,0,-1)+ offset;
       }
       else if(abs(hit.z-voxel.max.z)  < 0.001){
-        return vec3(0,0,1);
+        return vec3(0,0,1)+ offset;
       }
       else{
         return vec3(0,0,0);
@@ -116,18 +125,19 @@
         z = vPosition.z;
         float focalLength = 1.0;
         vec3 color = vec3(0.0, 0.0, 0.0);
+        seed = randSeed;
         // create voxels;
-        voxels[0] = Voxel(vec3(-50,0,-100),vec3(50,1,50),vec3(1,1,1),true,3); //floor
-        voxels[1] = Voxel(vec3(-10,-20,-10),vec3(-9,0,10),vec3(1,0,0),true,1);
-        voxels[2] = Voxel(vec3(9,-20,-40),vec3(10,0,10),vec3(0,1,0),true,1);
-        voxels[3] = Voxel(vec3(-4,-10.0-6.0*sin(uTime),-4),vec3(4,-9.0-6.0*sin(uTime),4),vec3(1,1,1),true,1);
-        voxels[4] = Voxel(vec3(-30,-20,-41),vec3(10,0,-40),vec3(1,1,1),true,3);
-        voxels[5] = Voxel(vec3(-50,-20,-100),vec3(-49,0,sin(uTime)*20.0),vec3(1,1,1),true,1);
-        voxels[6] = Voxel(vec3(-50,-20,-100),vec3(-30,-18,50),vec3(1,1,1),true,1);
-        voxels[7] = Voxel(vec3(-50,0,-100),vec3(0,-20,-90),vec3(1,0,0),true,2);
-        voxels[8] = Voxel(vec3(-50,0,40),vec3(-30,-20,50),vec3(1,1,1),true,1);
-        voxels[9] = Voxel(vec3(10,-100,0),vec3(40,0,30),vec3(1,1,1),true,1);
-        voxels[10] = Voxel(vec3(cPos.x,cPos.y,cPos.z),vec3(cPos.x+2.0,cPos.y+7.0,cPos.z+2.0),vec3(1,0,0),true,1);
+        voxels[0] = Voxel(vec3(-50,0,-100),vec3(50,1,50),vec3(1,1,1),true,3,0.5); //floor
+        voxels[1] = Voxel(vec3(-10,-20,-10),vec3(-9,0,10),vec3(1,0,0),true,1,0.5);
+        voxels[2] = Voxel(vec3(9,-20,-40),vec3(10,0,10),vec3(0,1,0),true,1,0.5);
+        voxels[3] = Voxel(vec3(-4,-20.0,-4),vec3(4,-17.0,4),vec3(2.5,2.25,2.0),true,1,0.5);
+        voxels[4] = Voxel(vec3(-30,-20,-11),vec3(10,0,-10),vec3(1,1,1),true,2,0.5);
+        voxels[5] = Voxel(vec3(-50,-20,-100),vec3(-49,0,sin(uTime)*20.0),vec3(1,1,1),true,1,0.5);
+        voxels[6] = Voxel(vec3(-50,-20,-100),vec3(20,-18,50),vec3(1,1,1),true,1,0.5);
+        voxels[7] = Voxel(vec3(-50,0,-100),vec3(0,-20,-90),vec3(1,0.1,0.1),true,2,0.5);
+        voxels[8] = Voxel(vec3(-50,0,40),vec3(-30,-20,50),vec3(1,1,1),true,1,0.5);
+        voxels[9] = Voxel(vec3(10,-100,0),vec3(40,0,30),vec3(1,1,1),true,1,0.5);
+        voxels[10] = Voxel(vec3(-1,-10,0),vec3(3,0,4),vec3(1,1,1),true,1,0.5);
 
 
         // Create ray
@@ -135,15 +145,15 @@
         rays[0].direction = rotY(thetaY) * normalize(vec3(x,-y, -focalLength));
 
         // Create Light source
-        lights[0] =  Light(vec3(-40,-16,20),vec3(0.1,1,0.1),400.0);
-        lights[1] =  Light(vec3(-40,-16,-30),vec3(1,0.1,0.1),150.0);
-        lights[2] =  Light(vec3(-40,-16,-70),vec3(1,0.7,0.9),80.0);
-        lights[3] =  Light(vec3(0,-14,0),vec3(1.0,0.1,10.7),400.0);
-        //lights[4] =  Light(vec3(-uTime+20.0,-12.0-6.0*cos(uTime),-30),vec3(0,1.0,0.2),100.0);
+        //lights[0] =  Light(vec3(100.0*cos(uTime+2.0),-4,100.0*sin(uTime+2.0),vec3(1,0.1,0.1),10.0);
+        lights[1] =  Light(vec3(20.0*cos(uTime+1.0),-4,20.0*sin(uTime+1.0)),vec3(1,0.1,0.1),15.0);
+        lights[2] =  Light(vec3(40.0*cos(uTime),-4,30.0*sin(uTime)),vec3(1,0.7,0.9),8.0);
+        lights[3] =  Light(vec3(6.0*cos(uTime),-4,6.0*sin(uTime)),vec3(1.0,0.6,0.1),4.0);
+        //lights[4] =  Light(vec3(-uTime+20.0,-12.0-6.0*cos(uTime),-30),vec3(0,1.0,0.2),10.0);
     }
 
     vec3 worldColor(float y){
-      return vec3(max((y+0.2),0.2)+0.5,max((y+0.2),0.2),max((y+0.2)*1.5,0.2))*0.8;
+      return vec3(max((y+0.2),0.2),max((y+0.2),0.2),max((y+0.2)*1.5,0.2))*0.6;
     }
 
     float random(float offset){
@@ -174,99 +184,95 @@
       return r*cos(angle)*sdir + r*sin(angle)*tdir + sqrt(1.-u)*normal;
     }
 
+    Voxel nullVoxel = Voxel(vec3(0,0,0),vec3(1,1,1),vec3(1,0,1),false,0,0.5);
 
-    vec3 mater1(Voxel hitVoxel, Ray ray,float minT){
-      vec3 hitLoc = rayPos(ray,minT);
-      vec3 normal = getVoxelNormal(hitLoc,hitVoxel);
-      hitLoc += normal*0.01;
-      vec3 gi = vec3(0.0);
-      vec3 randDir = vec3(0.0);
+    Hit hitWorld(Ray ray){
       float minDist = 10000000.0;
-      Voxel closestHit;
-      for(int i = 0; i < sampleCount; i++){
-        hasHit = false;
-          randDir = cosineWeightedDirection(float(i)+seed*0.03, normal);//4.0*randVec(1.0/float(i)+seed) + normal;
-          seed ++;
-          for(int i = 0; i < 11; i++){
-              vec2 hit = intersectVoxel(hitLoc,randDir,voxels[i].min,voxels[i].max);
-              if(hit.x < hit.y && hit.y > 0.0){
-                hasHit = true;
-                if(hit.x < minDist){
-                  minDist = hit.x;
-                  closestHit = voxels[i];
-                }
-              }
-          }
-          if(hasHit){
-            gi += closestHit.color*sf*0.03 - vec3(sf,sf,sf)*0.02;
-          }
-          else{
-            gi += worldColor(max(-randDir.y,0.0))*sf;
-          }
-      }
-      vec3 lighting = vec3(0.0);
-      for(int j =0; j< 5; j++){
-          vec3 shadowLDir = lights[j].position - hitLoc;
-          vec3 originalDir = normalize(shadowLDir);
-          float lDist = distance(hitLoc,lights[j].position);
-          float hasHitS = 1.0;
-          for(int z = 0; z< 10; z++){
-            float sfs = 0.1;
-            shadowLDir = lights[j].position - hitLoc + randVec(float(z)+seed);
-            for(int i = 0; i < 11; i++){
-              vec2 hitSL = intersectVoxel(hitLoc,shadowLDir,voxels[i].min,voxels[i].max);
-              float rDist = distance(hitLoc,rayPos(Ray(hitLoc,shadowLDir),hitSL.x));
-              if(hitSL.x < hitSL.y && hitSL.y > 0.01 && rDist < lDist){
-                hasHitS-=sfs;
-                sfs = 0.0;
-              }
+      Voxel closestHit = nullVoxel;
+      bool hasHit = false;
+      for(int i = 0; i < 11; i++){
+          vec2 hit = intersectVoxel(ray.origin,ray.direction,voxels[i].min,voxels[i].max);
+          if(hit.x < hit.y && hit.y > 0.0){
+            hasHit = true;
+            if(hit.x < minDist){
+              minDist = hit.x;
+              closestHit = voxels[i];
             }
           }
-          lighting += lights[j].color * (1.0/pow(lDist,2.0)) * lights[j].intens * hasHitS * dot(normal, normalize(originalDir));
-        }
-      return hitVoxel.color*(gi+lighting);
+      }
+      return Hit(closestHit,minDist,hasHit);
     }
 
-
-
-    vec3 mater2(Voxel hitVoxel, Ray ray, float minT){
-      vec3 hitLoc = rayPos(ray,minT);
-      vec3 normal = getVoxelNormal(hitLoc,hitVoxel);
-      hitLoc += normal*0.01;
-      vec3 reflecDir = ray.direction - 2.0*dot(ray.direction,normal)*normal + randVec(minT+uTime)*0.0;
-      Voxel closestHit;
-      float minDist = 10000000.0;
-      for(int i = 0; i < 11; i++){
-        vec2 hit = intersectVoxel(hitLoc,reflecDir,voxels[i].min,voxels[i].max);
-        if(hit.x < hit.y && hit.y > 0.0){
-          hasHit = true;
-          if(hit.x < minDist){
-            minDist = hit.x;
-            closestHit = voxels[i];
+    vec3 sampleColor(Ray r, int sampleIndex){
+      Ray ray = r;
+      vec3 finalColor = vec3(0.0);
+      vec3 finalReflec = vec3(1.0);
+      float frac = 1.0;
+      int bounceCount = 0;
+      vec3 lighting = vec3(0.0);
+      for(int depth = 0; depth< 3; depth++){
+        Hit hit = hitWorld(ray);
+        if(!hit.hasHit){
+          //do world lighting
+          if(depth==0){
+            return worldColor(-ray.direction.y);
+          }
+          else{
+            lighting = worldColor(-ray.direction.y);
+            bounceCount = depth;
+          }
+          break;
+        }
+        if(length(hit.voxel.color) > 1.74){
+          if(depth==0){
+            return hit.voxel.color;
+          }
+          else{
+            lighting = hit.voxel.color;
+          }
+          break;
+        }
+        vec3 hitPosition = rayPos(ray,hit.minDist);
+        vec3 normal = getVoxelNormal(hitPosition,hit.voxel);
+        hitPosition += normal*0.01;
+        if(sampleIndex > 18 && depth<2){
+          for(int j =0; j< 0; j++){
+            vec3 shadowLDir = lights[j].position - hitPosition;
+            vec3 originalDir = normalize(shadowLDir);
+            float lDist = distance(hitPosition,lights[j].position);
+            float hasHitS = 1.0;
+              shadowLDir = lights[j].position - hitPosition + randVec(float(depth)+seed);
+              Hit shadowHit = hitWorld(Ray(hitPosition,shadowLDir));
+              if(shadowHit.hasHit){
+                float rDist = distance(hitPosition,rayPos(Ray(hitPosition,shadowLDir),shadowHit.minDist));
+                if(rDist < lDist){
+                  hasHitS = 0.0;
+                }
+              }
+            if(hasHitS!=0.0){
+              lighting += lights[j].color * (1.0/pow(lDist,2.0)) * lights[j].intens * dot(normal, normalize(originalDir))*100.0*frac;
+            }
           }
         }
+        Hit directionalhit = hitWorld(Ray(hitPosition,vec3(sin(uTime),-0.9,1.0)+randVec(float(sampleIndex)+seed)*0.1));
+        if(!directionalhit.hasHit){
+          lighting += vec3(0.9,0.8,0.4);
+        }
+        vec3 localColor = hit.voxel.color+lighting;
+        finalColor += localColor*frac;
+        frac*=0.5;
+        ray.origin = hitPosition;
+        if(mod(float(sampleIndex),2.0)==0.0 && depth< 1){
+        ray.direction = ray.direction - 2.0*dot(ray.direction,normal)*normal + randVec(float(depth)+seed*0.03)*0.03;
+        }
+        else{
+          ray.direction = cosineWeightedDirection(float(depth)+seed*0.03, normal);
+        }
       }
-      if(hasHit){
-        return mater1(closestHit,Ray(hitLoc,reflecDir),minDist)*0.9 * hitVoxel.color;
-      }
-      else{
-        return worldColor(max(-reflecDir.y,0.1))*0.9*hitVoxel.color;
-      }
+      seed++;
+      return finalColor*lighting*pow(0.9,float(bounceCount));
     }
     
-
-    vec3 mater3(Voxel hitVoxel, Ray ray, float minT){
-      vec3 hitLoc = rayPos(ray,minT);
-      float checkSize = 0.4;
-      float fmodResult = mod(floor(checkSize * hitLoc.x) + floor(checkSize * hitLoc.z), 2.0);
-      float fin = max(sign(fmodResult), 0.0);
-      if(fin > 0.5){
-        return mater1(hitVoxel,ray,minT);
-      }
-      else{
-        return mater2(hitVoxel,ray,minT);
-      }
-    }
 
     
 
@@ -275,36 +281,11 @@
     
     void main() {
       initialize();
-      bool hasHit = false;
-      float minT = 10000.0; // holds distance to closest hit
-      Voxel hitVoxel;
-      seed = randSeed;
-      //rays[0].direction += vec3(0.5) * vPosition.y;
-      for(int i = 0; i < 10; i++){
-            vec2 hit = intersectVoxel(rays[0].origin,rays[0].direction,voxels[i].min,voxels[i].max);
-            if(hit.x < hit.y && hit.y > 0.0){
-              if(hit.x < minT){
-                minT = hit.x;
-                hasHit = true;
-                hitVoxel = voxels[i];
-              }
-            }
-        }
-      Voxel OhitVoxel = hitVoxel;
-      if(hasHit){
-        if(hitVoxel.matIndex == 1){
-          gl_FragColor = vec4(mater1(hitVoxel,rays[0],minT),1.0);
-        }
-        else if(hitVoxel.matIndex == 2){
-          gl_FragColor = vec4(mater2(hitVoxel,rays[0],minT),1.0);
-        }
-        else if(hitVoxel.matIndex == 3){
-          gl_FragColor = vec4(mater3(hitVoxel,rays[0],minT),1.0);
-        }
+      vec3 accumulatedColor = vec3(0.0);
+      for(int i =0; i< 10; i++){
+        accumulatedColor += sampleColor(Ray(rays[0].origin,rays[0].direction+randVec(float(i))*0.003),i)*0.1;
       }
-      else{
-        gl_FragColor = vec4(worldColor(max(-rays[0].direction.y,0.1)),1.0);
-      }
+      gl_FragColor = vec4(accumulatedColor,1.0);
    }
 </script>
 
