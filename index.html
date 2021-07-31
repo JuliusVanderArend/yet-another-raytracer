@@ -226,7 +226,7 @@
       }
       return false;
     }
-  
+    /*
     Hit hitWorldA(Ray ray){
       vec3 pos = ray.origin;
       vec3 dir = normalize(ray.direction);
@@ -250,6 +250,8 @@
       }
       return Hit(nullVoxel,64.0,false,vec3(0.0));
     } 
+    */
+
     vec3 scale = vec3(1.0/sizeX,1.0/sizeY,1.0/sizeZ)*0.5;
 
     Hit hitWorld(Ray ray,int maxDist){
