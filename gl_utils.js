@@ -61,7 +61,7 @@ async function initMapArray(){
     if(vals[3]==65 && vals[4]==65 && vals[5]==65){
       matIndex = 254;
     }
-    if(vals[3]==172 && vals[4]==81 && vals[5]==36){
+    if((vals[3]==172 && vals[4]==81 && vals[5]==36) || (vals[3]==133 && vals[4]==66 && vals[5]==51)||(vals[3]==153 && vals[4]==70 && vals[5]==52) ){
       matIndex = 253;
     }
     //console.log(index)
@@ -140,21 +140,7 @@ async function initMapArray(){
 //   }
 // }
 
-function packObjectArray(){
-  oPos = []
-  oCol = []
-  for(var i=0; i< nMaxObjects; i++){
-    oPos.push(objects[i][0])
-    oPos.push(objects[i][1])
-    oPos.push(objects[i][2])
-    oPos.push(objects[i][3])
-    oCol.push(objects[i][4])
-    oCol.push(objects[i][5])
-    oCol.push(objects[i][6])
-  }
-}
-// initObjectArray()
-// packObjectArray()
+
 initMapArray()
 
 
@@ -183,6 +169,52 @@ Vector3.prototype = {
     }
 };
 
+//
+// Initialize a texture and load an image.
+// When the image finished loading copy it into the texture.
+//
+function loadTexture(gl, url) {
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  const level = 0;
+  const internalFormat = gl.RGBA;
+  const width = 1;
+  const height = 1;
+  const border = 0;
+  const srcFormat = gl.RGBA;
+  const srcType = gl.UNSIGNED_BYTE;
+  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
+  gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                width, height, border, srcFormat, srcType,
+                pixel);
+
+  const image = new Image();
+  image.onload = function() {
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                  srcFormat, srcType, image);
+    console.log("dirt nMap bound")
+    // WebGL1 has different requirements for power of 2 images
+    // vs non power of 2 images so check if the image is a
+    // power of 2 in both dimensions.
+    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+       // Yes, it's a power of 2. Generate mips.
+       gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
+  };
+  image.src = url;
+  return texture;
+}
+
+function isPowerOf2(value) {
+  return (value & (value - 1)) == 0;
+}
 
 function getStringFromDOMElement(id) {
     var node = document.getElementById(id);
@@ -250,7 +282,10 @@ function gl_init(gl, vertexShader, fragmentShader,fragmentShader2) {
     gl.randSeed = gl.getUniformLocation(program,"randSeed")
     gl.thetaY =  gl.getUniformLocation(program,"thetaY")
     gl.map = gl.getUniformLocation(program,"map")
+    gl.dirtNormal = gl.getUniformLocation(program,"dirtNormal")
     console.log(gl.getUniformLocation(program,"map"))
+
+    var dirtNmap = loadTexture(gl,"ujkifdady_2K_Normal.jpg")
 }
 
 function bindMapTex(gl,map){
@@ -269,6 +304,7 @@ function gl_update(gl) {
     gl.uniform3f(gl.uCursor,0, 0, 0); 
     gl.uniform3f(gl.cPos,cPos[0],cPos[1],cPos[2])
     gl.uniform1i(gl.map, 0);
+    gl.uniform1i(gl.dirtNormal, 1);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     // console.log(gl.map)
 

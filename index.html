@@ -22,7 +22,13 @@
 <script id="fs" type="x-shader/x-fragment">#version 300 es
     precision mediump float;
     precision mediump sampler3D;
+
+
     uniform sampler3D map;
+    uniform sampler2D dirtNormal;
+
+
+
     out vec4 FragColor;
     uniform float uTime;
     in vec3 vPosition;
@@ -369,7 +375,21 @@
           break;
         }
         vec3 hitPosition = rayPos(ray,hit.minDist);
+        
         normal = hit.normal;//getVoxelNormal(hitPosition,hit.voxel);
+        if(hit.voxel.matIndex == 253){
+          vec4 nMap;
+          if(normal.y!=0.0){
+            nMap = texture(dirtNormal,vec2(hitPosition.x*0.2,hitPosition.z*0.2));
+          }
+          else if(normal.z!=0.0){
+            nMap = texture(dirtNormal,vec2(hitPosition.x*0.2,hitPosition.y*0.2));
+          }
+          else{
+            nMap = texture(dirtNormal,vec2(hitPosition.z*0.2,hitPosition.y*0.2));
+          }
+          normal*= (vec3(max(nMap.r,0.5),max(nMap.g,0.5),max(nMap.b,0.5)));
+        }
         hitPosition += normal*0.001;
         if(depth<2){
           int lIndex = 0;
@@ -398,9 +418,10 @@
             }
           }
         }
-        Hit directionalhit = hitWorld(Ray(hitPosition,vec3(1.0,-0.4,1.0)+randVec(float(sampleIndex)+seed)*0.1),48);
+        vec3 directionalDir = vec3(1.0,-0.4,1.0);
+        Hit directionalhit = hitWorld(Ray(hitPosition,directionalDir+randVec(float(sampleIndex)+seed)*0.1),48);
         if(!directionalhit.hasHit){
-          lighting += vec3(0.9)*hit.voxel.color;
+          lighting += vec3(0.9)*hit.voxel.color* dot(normal, directionalDir);
         }
         vec3 localColor = hit.voxel.color+lighting;//CHECK THIS!!!!
         finalColor += localColor*frac;
@@ -409,9 +430,10 @@
         if(hit.voxel.matIndex == 254){
           ray.direction = ray.direction - 2.0*dot(ray.direction,normal)*normal + randVec(float(depth)+seed)*0.1;
         }
-        else if(hit.voxel.matIndex == 253){
-          ray.direction = cosineWeightedDirection(float(depth)+seed*0.03, normal+cnoise(vec2(hitPosition.x*5.0,hitPosition.z*5.0))*0.4);
-        }
+        //else if(hit.voxel.matIndex == 253){
+        //  vec4 nMap = texture(dirtNormal,vec2(hitPosition.x*0.2,hitPosition.z*0.2));
+        //  ray.direction = cosineWeightedDirection(float(depth)+seed*0.03, normal+vec3(nMap.r,nMap.g,nMap.b)*1.4); //+cnoise(vec2(hitPosition.x*5.0,hitPosition.z*5.0))*0.4;
+        //}
         else{
           ray.direction = cosineWeightedDirection(float(depth)+seed*0.03, normal);
         }

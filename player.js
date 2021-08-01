@@ -22,13 +22,13 @@ class Player{
       thetaY-=0.04
     }
     if(keyIsDown(68)){
-      thetaY+=0.0e4
+      thetaY+=0.04
     }
     if(keyIsDown(81)){
-      this.y +=this.cMoveSpeed*10
+      this.y +=this.cMoveSpeed
     }
     if(keyIsDown(69)){
-      this.y -=this.cMoveSpeed*10
+      this.y -=this.cMoveSpeed
     }
     if(keyIsDown(16)){
       this.cMoveSpeed = this.fMoveSpeed
@@ -36,8 +36,8 @@ class Player{
     else{
       this.cMoveSpeed = this.moveSpeed
     }
-    this.y += this.vY/60
+    //this.y += this.vY/60
     cPos = [this.x,this.y,this.z]
-    console.log(cPos)
+    // console.log(cPos)
   }
 }
