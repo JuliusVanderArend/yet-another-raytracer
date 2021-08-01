@@ -1,5 +1,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.3.1/p5.js"></script>
 <script src="voxelData.js"></script>
+<script src="helper functions.js"></script>
 <script src="noise.js"></script>
 <script src="player.js"></script>
 <script src="main.js"></script>
@@ -421,7 +422,7 @@
         vec3 directionalDir = vec3(1.0,-0.4,1.0);
         Hit directionalhit = hitWorld(Ray(hitPosition,directionalDir+randVec(float(sampleIndex)+seed)*0.1),48);
         if(!directionalhit.hasHit){
-          lighting += vec3(0.9)*hit.voxel.color* dot(normal, directionalDir);
+          lighting += vec3(0.6)*hit.voxel.color* dot(normal, directionalDir);
         }
         vec3 localColor = hit.voxel.color+lighting;//CHECK THIS!!!!
         finalColor += localColor*frac;

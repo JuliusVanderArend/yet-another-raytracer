@@ -11,6 +11,7 @@ var gridSizeX = 128
 var gridSizeY = 64
 var gridSizeZ = 128
 
+var mapTexture
 
 function initObjectArray(){
     for (var i=0; i< nMaxObjects; i++){
@@ -289,12 +290,25 @@ function gl_init(gl, vertexShader, fragmentShader,fragmentShader2) {
 }
 
 function bindMapTex(gl,map){
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_3D, texture);
+  //gl.bindTexture(gl.TEXTURE_3D, null)
+  mapTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_3D, mapTexture);
+  console.log("map bind")
   console.log(map)
   gl.texImage3D(gl.TEXTURE_3D,0,gl.RGBA,gridSizeX,gridSizeY,gridSizeZ,0,gl.RGBA,gl.UNSIGNED_BYTE,
             new Uint8Array(map));
   gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.uniform1i(gl.map, 0);
+}
+
+function updateMapTex(gl, map) {
+  // const level = 0;
+  // const internalFormat = gl.RGBA;
+  // const srcFormat = gl.RGBA;
+  // const srcType = gl.UNSIGNED_BYTE;
+  gl.bindTexture(gl.TEXTURE_3D, mapTexture);
+  gl.texImage3D(gl.TEXTURE_3D,0,gl.RGBA,gridSizeX,gridSizeY,gridSizeZ,0,gl.RGBA,gl.UNSIGNED_BYTE,
+            new Uint8Array(map));
 }
  
 function gl_update(gl) {
@@ -303,8 +317,8 @@ function gl_update(gl) {
     gl.uniform1f(gl.thetaY,thetaY)
     gl.uniform3f(gl.uCursor,0, 0, 0); 
     gl.uniform3f(gl.cPos,cPos[0],cPos[1],cPos[2])
-    gl.uniform1i(gl.map, 0);
     gl.uniform1i(gl.dirtNormal, 1);
+    gl.uniform1i(gl.map, 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     // console.log(gl.map)
 
